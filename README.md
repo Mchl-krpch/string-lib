@@ -1,5 +1,7 @@
 # string-lib
 
+💻 implementation of well-known functions but in a different language
+
 ## Essence of the project
 
 my second assembly language project, implemented standard string functions from C, such as
