@@ -1,6 +1,6 @@
 # string-lib
 
-💻 implementation of well-known functions but in a different language
+💻 implementation of well-known functions but in a different language there are already implemented functions that use registers and change their values, that is, the use of such functions may affect the operation of other elements of the project, so you need to use them carefully
 
 ## Essence of the project
 
@@ -21,7 +21,7 @@ commands like [scasb](http://www.club155.ru/x86cmd/SCASB) helped me a lot, this 
 * smpsb - compares value ds:[si] with es:[di]
 * movsb - writes   ds:[si] to es:[di]
 
-##Thanks!
+## Thanks!
 I will be glad to your issue
 
 Krapchatov Michael, 22
