@@ -1,4 +1,4 @@
-# string-lib - second project on asm [![settings](https://raw.githubusercontent.com/Mchl-krpch/string-lib/0c5f67144e019a4a4cdba8e5ece243af031b7162/visual/settings-svgrepo-com.svg)]
+# string-lib - second project on asm ![settings](https://raw.githubusercontent.com/Mchl-krpch/string-lib/0c5f67144e019a4a4cdba8e5ece243af031b7162/visual/settings-svgrepo-com.svg)
 
 💻 Implementation of well-known functions but in a different language. Functions have already been written here that use registers and change their values, that is, the use of such functions may affect the operation of other elements of the project, so you need to use them carefully
 
