@@ -1,4 +1,4 @@
-# string-lib
+# string-lib  second project on asm
 
 💻 Implementation of well-known functions but in a different language. Functions have already been written here that use registers and change their values, that is, the use of such functions may affect the operation of other elements of the project, so you need to use them carefully
 
