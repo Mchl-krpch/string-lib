@@ -1,6 +1,6 @@
 # string-lib
 
-##Essence of the project
+## Essence of the project
 
 my second assembly language project, implemented standard string functions from C, such as
 * strlen - essence of the project
@@ -8,11 +8,11 @@ my second assembly language project, implemented standard string functions from 
 * strchr - find a character in a string
 * strcpy - copy a string to another string
 
-##Process
+## Process
 
 commands like [scasb](http://www.club155.ru/x86cmd/SCASB) helped me a lot, this makes the functions look extremely short, this project, unlike the first one, was written extremely quickly
 
-##New info
+## New info
 * scasb - compares value es:[di] with al
 * loop  - repeats some action until cx is reset to zero
 * stosw - copys    value ax to es:[di]
