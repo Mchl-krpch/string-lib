@@ -27,21 +27,25 @@ VIDEO_PTR = 0b800h
 org 100h
 
 start:
-	;call keyPause
-	mov	di, offset string1
-	mov si, offset string2
+	mov di, offset string1
+	mov si, offset string0
 
-	call strlen
-
-	call keyPause
+	call strcmp
+	;call strlen
+	mov al, 'O'
+	call strchr
 	call setVideo
+	;mov es:[di]
 
-	mov bx, offset string1
-	call print
+	call Pause
+
+	;mov bx, offset string1
+	;call print
 
 	call exitp
 
 
+; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; @brief | returns the length of the
 ;        | string (counts characters)
@@ -72,19 +76,13 @@ _strlen	proc
 endp
 
 
+; ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
 ; ===--------------------------------------------------===
 atoi proc
 endp
 
 
-strcpy proc
-	cld
-	push ax
-call _strcpy
-	pop ax
-	ret
-endp
-
+; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | copies the contents of one string to another
 ; use   | {ax}[with save]
@@ -93,6 +91,14 @@ endp
 ; ret   | nthg
 ; dest  | {si, di}
 ; ===--------------------------------------------------===
+strcpy proc
+	cld
+	push ax
+call _strcpy
+	pop ax
+	ret
+endp
+
 _strcpy proc
 @@repeat:
 	scasb
@@ -103,13 +109,11 @@ _strcpy proc
 	inc di
 	movsb
 	jmp @@repeat
-
 @@end:
 	ret
 endp
 
-
-
+; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | compares strings lexicographically
 ; use   | {ax}[with save], {di, si, es}
@@ -117,18 +121,26 @@ endp
 ;       | es:[di] - ptr to second str
 ; ret   | cmp value, line below decryption
 ; dest  | {si, di}
-equiv = 0
-less  = -1
-more  = 1
-strcmp 	proc
-	
+; #Example function with cdecl type convention
+; #parameters are passed from right to left across
+; #the stack and the stack pointer is returned by
+; #the calling program
+strcmp proc
 	cld
 	push di
 	call strlen
 	inc cx
 	pop di
-	; #---------------------------------------------
+call _strcmp
+	ret
+endp
 
+;#LOCAL-DEFINES
+equiv = 0
+less  = -1
+more  = 1
+; #############
+_strcmp proc
 	repe cmpsb
 	ja @@less
 	jb @@more
@@ -147,99 +159,68 @@ strcmp 	proc
 	jmp @@end
 	
 @@end:
-
-	; #---------------------------------------------
 	ret
 endp
 
 
+; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | returns the index of a char in a str
 ; use   | {ax, es, di, si}
 ;       | es:[di] - ptr str (looking here)
 ; ret   | {bx} - index of char
-; dest  | {ax, si, di}
+; dest  | {bx,ax,si,di}
+; #Example function with cdecl type convention
+; #parameters are passed from right to left across
+; #the stack and the stack pointer is returned by
+; #the calling program
 strchr proc
-
 	cld
-
 	xor bx, bx
+	push ax
 	push di
 	call strlen
 	pop di
-	; #---------------------------------------------
+	pop ax
 
-	continueSearch:
+	push ax
+	call _strchr
+	pop ax
+	ret
+endp
+
+_strchr proc
+	mov bp, sp
+	mov ax, [bp + 2d]
+@@continueSearch:
 	scasb
-	je endSearch
+	je @@end
 
 	inc bx
-	loop continueSearch
+	loop @@continueSearch
 
 	noSymbol:
 	mov ax, -1
 
-	endSearch:
-
-	; #---------------------------------------------
+@@end:
 	ret
 endp
 
 
-
-; ===--------------------------------------------------===
-; brief | pause until the user presses any key
-; use   | {ax}[with save]
-; ret   | nthg
-keyPause proc
-	xor ax, ax
-	int 16h
-	ret
-endp
-
-
-
-; ===--------------------------------------------------===
-; brief | terminates the program
-exitp proc
-	mov ax, 4C00h
-	int 21h
-	ret
-endp
-
-
-; ===--------------------------------------------------===
-setVideo proc
-	
-	push ax
-	; #---------------------------------------------
-
-	mov ax, VIDEO_PTR
-	mov es, ax
-	xor di, di
-
-	; #---------------------------------------------
-	pop ax
-
-	ret
-endp
-
-
+; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | write string buffer on screen
 ; use   | {di,si}
 ;       | es:[di] - ptr to video segment
 ; ret   | nthg
 ; dest  | {si}
-; #example of Pascal wrapper function
+; #example of <<Pascal>> wrapper function
 ; #arguments are passed from left to right, the
 ; #stack pointer is restored by the called function
 print proc
 	xor al, al
 	xor si, si
-
 	push di
-
 	call _print
 	ret
 endp
@@ -250,7 +231,6 @@ _print proc
 @@repeat:
 	scasb
 	je @@end
-
 	inc di
 	mov ax, [bx + si]
 	mov es:[di], al
@@ -263,6 +243,52 @@ _print proc
 	ret
 endp
 
+
+; ===--------------------------------------------------===
+; brief | pause until the user presses any key
+; use   | {ax}[with save]
+; ret   | nthg
+; #example of simple regs-function
+; #registers are stored on the stack
+; #for the duration of the function
+Pause proc
+	push ax
+	xor ax, ax
+	int 16h
+	pop ax
+	ret
+endp
+
+
+; ===--------------------------------------------------===
+; @breif | sets video memory address to es:[di]
+; @use   | {es}
+; @ret   | nthg
+; @dest  | {di,es}
+; #example of simple regs-function
+; #registers are stored on the stack
+; #for the duration of the function
+setVideo proc
+	push ax
+	mov ax, VIDEO_PTR
+	mov es, ax
+	xor di, di
+	pop ax
+	ret
+endp
+
+
+; ===--------------------------------------------------===
+; brief | terminates the program
+; #example of simple regs-function
+exitp proc
+	mov ax, 4C00h
+	int 21h
+	ret
+endp
+	
+
+string0 db 'hello', 0
 string1 db 'MEEOOOWW!', 0
 string2 db '.net bl at gaf', 0
 string3 db '______', 0
