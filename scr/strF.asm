@@ -22,37 +22,112 @@ locals @@
 .model tiny
 
 VIDEO_PTR = 0b800h
+RADIXX = 16d
 
 .code
 org 100h
 
+; ===--------------------------------------------------===
+
 start:
-	mov di, offset string1
-	mov si, offset string0
+	mov di, offset string1 		;# str1
+	mov si, offset string_atoi	;# str2
+	mov bx, offset string_atoi
 
-	call strcmp
-	;call strlen
-	mov al, 'O'
-	call strchr
+	mov ax, 4d
+	mov si, 3d
+	call atoi2
+	call exitp
+
+	call strncpy
 	call setVideo
-	;mov es:[di]
-
-	call Pause
-
-	;mov bx, offset string1
-	;call print
-
+	mov bx, offset string0
+	call print
 	call exitp
 
 
-; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
+; ===--------------------------------------------------===
+; @brief | converts a literal string to a number #FASTER#
+; @use   | {ax,cx,di}
+; @ret   | ax - number
+; @dest  | di, si
+; #Example function with cdecl type convention
+; #parameters are passed from right to left across
+; #the stack and the stack pointer is returned by
+; #the calling program
+atoi proc
+	push ax
+	xor ax, ax
+	xor di, di
+	call _atoi
+	pop ax
+	ret
+endp
+
+_atoi proc
+	mov bp, sp
+@@repeat:
+	mov dx, [bp + 2d]		; #next tens place
+	mul dx
+	xor dh, dh
+
+	mov cx, [bx + di]		; #push new tens
+	xor ch, ch
+	sub cx, '0'
+	add ax, cx
+
+	add di, 1d
+	cmp si, di
+	jne @@repeat
+	ret
+endp
+
+
+; ===--------------------------------------------------===
+; @brief | converts a literal string to a number
+; @use   | {ax,cx,di}
+; @ret   | ax - number
+; @dest  | di, si
+; #Example function with cdecl type convention
+; #parameters are passed from right to left across
+; #the stack and the stack pointer is returned by
+; #the calling program
+atoi2 proc
+	push ax
+	xor ax, ax
+	xor di, di
+	call _atoi2
+	pop ax
+	ret
+endp
+
+_atoi2 proc
+	mov bp, sp
+@@repeat:
+	push cx
+	mov cx, [bp + 2d]		; #next tens place
+	shl ax, cl
+	xor dh, dh
+	pop cx
+
+	mov cx, [bx + di]		; #push new tens
+	xor ch, ch
+	sub cx, '0'
+	add ax, cx
+
+	add di, 1d
+	cmp si, di
+	jne @@repeat
+	ret
+endp
+
+
 ; ===--------------------------------------------------===
 ; @brief | returns the length of the
 ;        | string (counts characters)
 ; @use   | {ax,cx,di}
 ; @ret   | cx number of symbols
 ; @dest  | ax,cx
-; ===--------------------------------------------------===
 ; #example of common regs-function
 ; #registers are reset in the wrapper and
 ; #fed into the function for filling
@@ -76,13 +151,6 @@ _strlen	proc
 endp
 
 
-; ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? 
-; ===--------------------------------------------------===
-atoi proc
-endp
-
-
-; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | copies the contents of one string to another
 ; use   | {ax}[with save]
@@ -90,30 +158,30 @@ endp
 ;       | es:[di] - ptr to second str (write here)
 ; ret   | nthg
 ; dest  | {si, di}
-; ===--------------------------------------------------===
-strcpy proc
+; #example of common regs-function
+; #registers are reset in the wrapper and
+; #fed into the function for filling
+strncpy proc
 	cld
-	push ax
-call _strcpy
-	pop ax
+	xor ax, ax
+call _strncpy
 	ret
 endp
 
-_strcpy proc
+_strncpy proc
 @@repeat:
-	scasb
+	movsb
+	cmp es:[di],al
 	je @@end
 	cmp ds:[si], al
 	je @@end
 
-	inc di
-	movsb
 	jmp @@repeat
 @@end:
 	ret
 endp
 
-; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
+
 ; ===--------------------------------------------------===
 ; brief | compares strings lexicographically
 ; use   | {ax}[with save], {di, si, es}
@@ -163,7 +231,6 @@ _strcmp proc
 endp
 
 
-; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | returns the index of a char in a str
 ; use   | {ax, es, di, si}
@@ -207,7 +274,6 @@ _strchr proc
 endp
 
 
-; ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! ! !
 ; ===--------------------------------------------------===
 ; brief | write string buffer on screen
 ; use   | {di,si}
@@ -218,7 +284,7 @@ endp
 ; #arguments are passed from left to right, the
 ; #stack pointer is restored by the called function
 print proc
-	xor al, al
+	xor ax, ax
 	xor si, si
 	push di
 	call _print
@@ -286,11 +352,12 @@ exitp proc
 	int 21h
 	ret
 endp
-	
 
-string0 db 'hello', 0
-string1 db 'MEEOOOWW!', 0
-string2 db '.net bl at gaf', 0
-string3 db '______', 0
+
+string_atoi 	db '123', 0
+string0 	db 'hello', 0
+string1 	db 'MEEOOOWW!', 0
+string2 	db '.net bl at gaf', 0
+string3 	db '______', 0
 
 end start
