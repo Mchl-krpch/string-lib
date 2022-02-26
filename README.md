@@ -26,6 +26,6 @@ Commands like [scasb](http://www.club155.ru/x86cmd/SCASB) helped me a lot, this 
 ## Thanks!
 I will be glad to your `issue`
 
-Krapchatov Michael, 22
+Krapchatov Michael, Feb 2022
 
 
