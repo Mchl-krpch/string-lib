@@ -12,6 +12,8 @@ My second assembly language project, implemented standard string functions from 
 
 ## Process
 
+![img](https://raw.githubusercontent.com/Mchl-krpch/string-lib/main/visual/wrapper-poster.jpg)
+
 Commands like [scasb](http://www.club155.ru/x86cmd/SCASB) helped me a lot, this makes the functions look extremely short, this project, unlike the first one, was written extremely quickly
 
 ## New info
