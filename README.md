@@ -5,10 +5,13 @@
 ## Essence of the project
 
 My second assembly language project, implemented `standard string functions` from `C`, such as
-* strlen - essence of the project
-* strcmp - compare strings lexicographically
-* strchr - find a character in a string
-* strcpy - copy a string to another string
+- [X] strlen - essence of the project
+- [X] strcmp - compare strings lexicographically
+- [X] strchr - find a character in a string
+- [X] strcpy - copy a string to another string
+- [X] atoi - translates string to number
+- [X] itoa - translates number to string
+- [X] print - write string on a screen  -without arguments, only [text buf]
 
 ## Process 👾
 
