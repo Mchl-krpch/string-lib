@@ -25,7 +25,7 @@
      EXIT_CODE = 04C00H
      PAUSE_VAL = 00000H
      VIDEO_PTR = 0B800H
-     RADIX_SYS = 16D
+     RADIX_SYS = 2D
      RADIX_DEG = 4D
 
         org 100h
@@ -34,32 +34,56 @@
 	;-Some conventions when using registers in lib (more often)
 ;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	MOV   DI,offset stia
-	MOV   BX,RADIX_SYS
-	MOV   AX,123D
-	CALL  itoa
+	MOV   AX,1339H
+	MOV   BX,offset stia
+	MOV   DX,RADIX_SYS
+	CALL  itoa                  ; Program stops here
+	XOR   SI,SI
+	XOR   DI,DI
+	CALL  set_video
+	MOV   BX,offset stia
+	MOV   DI,(80D * 4D + 30D) * 2D
 	CALL  print
 	CALL  exit_program
 
 	;#.The main functions of the library (7 functions)
 ; Ret DI-resulting string  
-; Incoming: CX,DI           |! ITOA NOT DONE YET
+; Incoming: ax-number to translate, dx-base of system, bx-ptr to string to fill
 itoa proc
-	PUSH  DI                    ; "strlen" needs di, so we push it
-	CALL  strlen                ; Remember string length [in cx]
-	POP   DI                    ; Return di
-	ADD   DI,CX
-	CALL  _itoa
+	PUSH  SI
+	XOR   SI,SI                 ; Clear si counter
+	PUSH  DX                    ; Push regs
+	XOR   DX,DX
+	CALL  _itoa                 ; Call executor
+	POP   DX
+	POP   SI
 	RET
 	ENDP
 _itoa proc
-	MOV   bp,sp
-@@repeat:
-	DIV   BX                    ; The whole part is written in AX the remainder - in DX
-	MOV   DI,BX
-	DEC   DI
-	CMP   AX,0D
-	JA    @@repeat
+	MOV   BP,SP                 ; Mov stack pointer
+	MOV   CX,[BP + 2D]          ; Pull radix
+@@decrease_by_order:                ; Start diving
+	DIV   CX                    ; Div ax-number by radix
+	ADD   DL,'0'                ; Add zero ascii-code
+	MOV   [BX + SI],DL          ; Set digit in number, (we have inversed number buffer)
+	INC   SI                    ; ^-- (num: ax = 123 => buf:[321]) #we need reverse-func
+	XOR   DX,DX                 ; Clear mod
+	CMP   AX,0D                 ; If we have zero, number is translated to string
+	JNE   @@decrease_by_order   ; Set next digit in string
+	PUSH  DI
+	MOV   CX,SI                 ; Set string len
+	SHR   CX,1D                 ; Repeat reversing of digits (len-of-num / 2D)
+	XOR   DI,DI
+	DEC   SI                    ; Offset in buffer is less by 1D
+@@reverse_string:
+	MOV   AH,[BX + SI]          ; | Changing of numbers
+	MOV   AL,[BX + DI]          ; |
+	MOV   [BX + SI],AL          ; |
+	MOV   [BX + DI],AH          ; |
+	DEC   SI
+	INC   DI
+	loop  @@reverse_string      ; Continue changing of numbers (len-of-num / 2D).times
+	POP   DI
 	RET
 	ENDP
 
@@ -166,10 +190,11 @@ _strchr proc                        ; [cdecl] doesn-t clear anything
 ; Ret: Nothing
 ; Incoming: al - end-of-line char, {bx} - string ptr, si - counter di - pos on screen
 print proc                          ; [unsafe]-Put symbols on the screen
-	XOR   AL,AL                 ; #pascal wrapper
+	XOR   AL,AL                 ; #cdecl wrapper
 	XOR   SI,SI                 ; Set begin of the string
 	PUSH  DI                    ; Put position on screen
 	CALL  _print
+	POP   DI
 	RET
 	ENDP
 _print proc                         ; [pascal]  clear di position
@@ -185,7 +210,6 @@ _print proc                         ; [pascal]  clear di position
 	INC   SI
 	JMP   @@repeat
 @@end:
-	POP   DI
 	RET
 	ENDP
 
@@ -227,7 +251,7 @@ _strlen_short proc                  ; Execute
 	ENDP
 
 ; Ret: CX -sym.counter
-; Incoming: ax-terminated character, cx-symbol counter   
+; Incoming: ax-terminated character, cx-symbol counter, di-ptr to string 
 strlen proc                         ; [unsave]-string length
 	PUSH  AX                    ; #cdecl wrapper
 	XOR   AX,AX
@@ -274,6 +298,7 @@ _video_ptr proc
 	ENDP
 
 exit_program proc                   ; #programm finalist.
+	XOR   AX,AX
 	MOV   AX,EXIT_CODE          ; (uses interrupt 21) = 04C00H
 	INT   21H                   ; interrupt
 	RET
@@ -283,6 +308,6 @@ str1 db 'meow meow meow purr!', 0
 str2 db 'abobus.86-64', 0
 str3 db 'meowWZ', 0
 stai db '123', 0
-stia db '   ', 0                    ;string to fill with numbers
+stia db '              ', 0                    ;string to fill with numbers
 
 END start
