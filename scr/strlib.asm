@@ -21,49 +21,96 @@
 	.model tiny             ; using memory model for small programs
 
 ;-------------------------------------------------------------------------------
-    .code   ; The library uses wrappers
-EXIT_CODE = 04C00H
-PAUSE_VAL = 00000H
-VIDEO_PTR = 0B800H
-RADIX_SYS = 16D
+        .code   ; The library uses wrappers
+     EXIT_CODE = 04C00H
+     PAUSE_VAL = 00000H
+     VIDEO_PTR = 0B800H
+     RADIX_SYS = 16D
 
-org 100h
+        org 100h
 ;-------------------------------------------------------------------------------
 
 	;-Some conventions when using registers in lib (more often)
 ;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	MOV   DI,offset str1
-	MOV   SI,offset str3
-	CALL  _strncpy
-	CALL  set_video
-	MOV   BX, offset str1
-	CALL  print
+	MOV   DI,offset str3
+	MOV   AL,'e'
+	CALL  strchr_short
 	CALL  exit_program
+
+	;#.The main functions of the library (7 functions)
+strcmp proc                          ; [unsafe]-Put symbols on the screen
+	CLD                          ; Set direction of increment
+	PUSH  DI
+	CALL  strlen
+	INC   CX
+	POP   DI
+call _strcmp
+	RET
+endp
+_strcmp proc                         ;
+	repe  cmpsb                  ; Looking for a mismatched character
+	JA    @@less                 ; Selects the desired option
+	JB    @@more                 ;
+	JE    @@equiv                ;
+@@equiv:
+	MOV   AX,1
+	JMP   @@end
+@@less:
+	MOV   AX,0
+	JMP   @@end
+@@more:
+	MOV   AX,2
+	JMP   @@end
+@@end:
+	RET
+	ENDP
+
+strchr proc                          ; [unsafe]-Search symbol
+	CLD                          ; Set direction of increment
+	XOR   BX,BX                  ; Will be the index of the found character
+	CALL  strlen                 ; In cx we write the length of the string
+	PUSH  AX
+	CALL  _strchr
+	POP   AX
+	RET
+	ENDP
+_strchr proc
+	MOV   bp,sp
+	MOV   AX,[bp + 2D]
+@@continueSearch:
+	scasb
+	JE    @@end
+	INC   BX
+	loop  @@continueSearch
+	MOV   AX, -1
+@@end:
+	RET
+	ENDP
 
 ; Incoming: SI, AL
 ; Ret: Nothing
 print proc                          ; [unsafe]-Put symbols on the screen
-	XOR   AL, AL                ; #cdecl wrapper
-	XOR   SI, SI
+	XOR   AL,AL                 ; #cdecl wrapper
+	XOR   SI,SI
 	PUSH  DI
 	CALL  _print
 	RET
 	ENDP
 _print proc
-	MOV   bp, sp
-	MOV   di, [bp + 2d]         ; Use di-index
+	MOV   bp,sp
+	MOV   di,[bp + 2d]          ; Use di-index
 @@repeat:
 	scasb
 	JE    @@end
 	INC   DI
-	MOV   AL, [bx + SI]         ; Copy si-symbol to AL
-	MOV   es:[di], al           ; Puts it on the screen
-	XOR   al, al
+	MOV   AL,[bx + SI]          ; Copy si-symbol to AL
+	MOV   es:[di],AL            ; Puts it on the screen
+	XOR   AL, AL
 	INC   SI
 	JMP   @@repeat
 @@end:
-	POP DI
+	POP   DI
 	RET
 	ENDP
 
@@ -96,7 +143,7 @@ strlen_short proc                   ; [unsave]-string length
 	XOR   AL,AL                 ;     index and take the complement of two
 	CALL   _strlen_short
 	SUB   CX,1D                 ; if you do not subtract one, then there will be a
-	POP   AX                   ; length of the string with zero
+	POP   AX                    ; length of the string with zero
 	RET
 	ENDP
 _strlen_short proc                  ; Execute
@@ -110,8 +157,8 @@ _strlen_short proc                  ; Execute
 strlen proc                         ; [unsave]-string length
 	PUSH  AX                    ; #cdecl wrapper
 	CLD                         ; Set direction of increment
-	XOR   CX, CX                ; Prepare parameters
-	XOR   AL, AL                ;
+	XOR   CX,CX                 ; Prepare parameters
+	XOR   AL,AL                 ;
 	CALL  _strlen
 	POP   AX
 	RET
@@ -161,6 +208,6 @@ exit_program proc                   ; #programm finalist.
 
 str1 db 'meow meow meow purr!', 0
 str2 db 'abobus.86-64', 0
-str3 db 'meowWW', 0
+str3 db 'meowWZ', 0
 
 END start
