@@ -30,28 +30,59 @@ RADIX_SYS = 16D
 org 100h
 ;-------------------------------------------------------------------------------
 
-	;-Some conventions when using registers in the library
+	;-Some conventions when using registers in lib (more often)
 ;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	MOV   DI, offset str3
-	CALL  strlen_short
+	MOV   DI,offset str1
+	MOV   SI,offset str3
+	CALL  _strncpy
+	CALL  set_video
+	MOV   BX, offset str1
+	CALL  print
 	CALL  exit_program
 
+; Incoming: SI, AL
+; Ret: Nothing
+print proc                          ; [unsafe]-Put symbols on the screen
+	XOR   AL, AL                ; #cdecl wrapper
+	XOR   SI, SI
+	PUSH  DI
+	CALL  _print
+	RET
+	ENDP
+_print proc
+	MOV   bp, sp
+	MOV   di, [bp + 2d]         ; Use di-index
+@@repeat:
+	scasb
+	JE    @@end
+	INC   DI
+	MOV   AL, [bx + SI]         ; Copy si-symbol to AL
+	MOV   es:[di], al           ; Puts it on the screen
+	XOR   al, al
+	INC   SI
+	JMP   @@repeat
+@@end:
+	POP DI
+	RET
+	ENDP
 
-strncpy proc
-	CLD
-	XOR   AX,AX
+; Incoming: SI, DI, AL
+; Ret: new-string
+strncpy proc                        ; [safe]-copy a string to another
+	CLD                         ; Set direction of increment
+	XOR   AL,AL
 	CALL  _strncpy
 	RET
 	ENDP
 _strncpy proc
 @@repeat:
-	movsb
-	CMP   es:[di],al
-	JE    @@end
-	CMP   ds:[si], al
-	JE    @@end
-	JMP   @@repeat
+	movsb                       ; Copies a byte from DS:[SI] to ES:[DI]
+	CMP   es:[DI],AL
+	JE    @@end                 ; Check strings endings 
+	CMP   ds:[SI],AL            ;
+	JE    @@end                 ;
+	JMP   @@repeat              ; Repeat until one of the lines ends
 @@end:
 	RET
 	ENDP
@@ -61,11 +92,11 @@ _strncpy proc
 strlen_short proc                   ; [unsave]-string length
 	PUSH  AX                    ; #cdecl wrapper
 	CLD                         ; Set direction of increment
-	MOV   CX, 0FFFFH            ; [!] Subtract the length of the string from the maximum
-	XOR   AL, AL                ;     index and take the complement of two
+	MOV   CX,0FFFFH             ; [!] Subtract the length of the string from the maximum
+	XOR   AL,AL                 ;     index and take the complement of two
 	CALL   _strlen_short
-	SUB   CX, 1D                ; if you do not subtract one, then there will be a
-	POP    AX                   ; length of the string with zero
+	SUB   CX,1D                 ; if you do not subtract one, then there will be a
+	POP   AX                   ; length of the string with zero
 	RET
 	ENDP
 _strlen_short proc                  ; Execute
@@ -81,8 +112,8 @@ strlen proc                         ; [unsave]-string length
 	CLD                         ; Set direction of increment
 	XOR   CX, CX                ; Prepare parameters
 	XOR   AL, AL                ;
-	CALL   _strlen
-	POP    AX
+	CALL  _strlen
+	POP   AX
 	RET
 	ENDP
 _strlen proc                        ; Execute
