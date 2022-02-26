@@ -33,12 +33,33 @@
 	;-Some conventions when using registers in lib (more often)
 ;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	MOV   DI,offset str3
-	MOV   AL,'e'
-	CALL  strchr
+	MOV   DI,offset stai
+	MOV   BX,RADIX_SYS
+	CALL  atoi
 	CALL  exit_program
 
 	;#.The main functions of the library (7 functions)
+; Ret AX-result number
+; Incoming: CX,DI           |! cx-strlen, di-ptr to str, ax-result, bx-radix
+atoi proc
+	XOR   AX,AX                  ; Clear the future response field
+	PUSH  DI                     ; "strlen" needs di, so we push it
+	CALL  strlen                 ; We consider the length
+	POP   DI                     ; Return di
+	CALL  _atoi                  ; Let-s start translating
+	RET
+	ENDP
+_atoi proc
+	MOV   bp,sp
+@@repeat:
+	MUL   BX                     ; Shift the digits of a number by one digit
+	ADD   AL,es:[DI]             ; Adding the next digit
+	INC   DI                     ; Set the pointer to the next digit
+	SUB   AL,'0'                 ; Subtract character code zero
+	loop  @@repeat               ; Repeat until we reach the last burst
+	RET
+	ENDP
+
 ; Incoming: DI, AL
 ; Ret: AX-cmp result        |! al - search-symbol, bx, cx-strlen
 strcmp proc                          ; [unsafe]-Put symbols on the screen
@@ -50,7 +71,7 @@ strcmp proc                          ; [unsafe]-Put symbols on the screen
 call _strcmp
 	RET
 endp
-_strcmp proc                         ;
+_strcmp proc                         
 	repe  cmpsb                  ; Looking for a mismatched character
 	JA    @@less                 ; Selects the desired option
 	JB    @@more                 ;
@@ -145,7 +166,7 @@ strlen_short proc                   ; [unsave]-string length
 	MOV   CX,0FFFFH             ; [!] | The function subtracts one from the maximum value of the
 	XOR   AL,AL                 ;     | word until it finds the desired character, and then subtracts 
 	CALL   _strlen_short        ;     | the resulting value from the maximum value of the word
-	SUB   CX,1D                 ; if you do not subtract one, then there will be a
+	DEC   CX                    ; if you do not subtract one, then there will be a
 	POP   AX                    ; length of the string with zero
 	RET
 	ENDP
@@ -210,5 +231,6 @@ exit_program proc                   ; #programm finalist.
 str1 db 'meow meow meow purr!', 0
 str2 db 'abobus.86-64', 0
 str3 db 'meowWZ', 0
+stai db '123', 0
 
 END start
