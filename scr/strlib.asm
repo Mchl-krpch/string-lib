@@ -26,6 +26,7 @@
      PAUSE_VAL = 00000H
      VIDEO_PTR = 0B800H
      RADIX_SYS = 16D
+     RADIX_DEG = 4D
 
         org 100h
 ;-------------------------------------------------------------------------------
@@ -33,38 +34,87 @@
 	;-Some conventions when using registers in lib (more often)
 ;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	MOV   DI,offset stai
+	MOV   DI,offset stia
 	MOV   BX,RADIX_SYS
-	CALL  atoi
+	MOV   AX,123D
+	CALL  itoa
+	CALL  print
 	CALL  exit_program
 
 	;#.The main functions of the library (7 functions)
+; Ret DI-resulting string  
+; Incoming: CX,DI           |! ITOA NOT DONE YET
+itoa proc
+	PUSH  DI                    ; "strlen" needs di, so we push it
+	CALL  strlen                ; Remember string length [in cx]
+	POP   DI                    ; Return di
+	ADD   DI,CX
+	CALL  _itoa
+	RET
+	ENDP
+_itoa proc
+	MOV   bp,sp
+@@repeat:
+	DIV   BX                    ; The whole part is written in AX the remainder - in DX
+	MOV   DI,BX
+	DEC   DI
+	CMP   AX,0D
+	JA    @@repeat
+	RET
+	ENDP
+
 ; Ret AX-result number
-; Incoming: CX,DI           |! cx-strlen, di-ptr to str, ax-result, bx-radix
+; Incoming: [cx]-strlen, [di]-ptr to str, [ax]-result, bx-radix
+atoi2 proc
+	XOR   AX,AX                 ; Clear the future response field
+	PUSH  DI                    ; "strlen" needs di, so we push it
+	CALL  strlen                ; We consider the length
+	POP   DI                    ; Return di
+	PUSH  BX
+	CALL  _atoi2                ; Let-s start translating
+	POP   BX
+	RET
+	ENDP
+_atoi2 proc
+	MOV   bp,sp
+@@repeat:
+	PUSH  CX
+	MOV   CX,[bp + 2D]
+	SHL   AX,CL                 ; Shift the digits of a number by one digit
+	POP   CX
+	ADD   AL,es:[DI]            ; Adding the next digit
+	INC   DI                    ; Set the pointer to the next digit
+	SUB   AL,'0'                ; Subtract character code zero
+	loop  @@repeat              ; Repeat until we reach the last burst
+	RET
+	ENDP
+
+; Ret AX-result number
+; Incoming: [cx]-strlen, [di]-ptr to str, [ax]-result, bx-radix
 atoi proc
-	XOR   AX,AX                  ; Clear the future response field
-	PUSH  DI                     ; "strlen" needs di, so we push it
-	CALL  strlen                 ; We consider the length
-	POP   DI                     ; Return di
-	CALL  _atoi                  ; Let-s start translating
+	XOR   AX,AX                 ; Clear the future response field
+	PUSH  DI                    ; "strlen" needs di, so we push it
+	CALL  strlen                ; We consider the length
+	POP   DI                    ; Return di
+	CALL  _atoi                 ; Let-s start translating
 	RET
 	ENDP
 _atoi proc
 	MOV   bp,sp
 @@repeat:
-	MUL   BX                     ; Shift the digits of a number by one digit
-	ADD   AL,es:[DI]             ; Adding the next digit
-	INC   DI                     ; Set the pointer to the next digit
-	SUB   AL,'0'                 ; Subtract character code zero
-	loop  @@repeat               ; Repeat until we reach the last burst
+	MUL   BX                    ; Shift the digits of a number by one digit
+	ADD   AL,es:[DI]            ; Adding the next digit
+	INC   DI                    ; Set the pointer to the next digit
+	SUB   AL,'0'                ; Subtract character code zero
+	loop  @@repeat              ; Repeat until we reach the last burst
 	RET
 	ENDP
 
-; Incoming: DI, AL
-; Ret: AX-cmp result        |! al - search-symbol, bx, cx-strlen
-strcmp proc                          ; [unsafe]-Put symbols on the screen
-	CLD                          ; Set direction of increment
-	PUSH  DI                     ; To save DI string pointer
+; Ret: AX-cmp result
+; Incoming: al - search-symbol, bx, cx-strlen, {di,si}-ptr to string
+strcmp proc                         ; [unsafe]-Put symbols on the screen
+	CLD                         ; Set direction of increment
+	PUSH  DI                    ; To save DI string pointer
 	CALL  strlen
 	INC   CX
 	POP   DI
@@ -72,37 +122,37 @@ call _strcmp
 	RET
 endp
 _strcmp proc                         
-	repe  cmpsb                  ; Looking for a mismatched character
-	JA    @@less                 ; Selects the desired option
-	JB    @@more                 ;
-	JE    @@equiv                ;
+	repe  cmpsb                 ; Looking for a mismatched character
+	JA    @@less                ; Selects the desired option
+	JB    @@more                ;
+	JE    @@equiv               ;
 @@equiv:
-	MOV   AX,1
+	MOV   AX,1D
 	JMP   @@end
 @@less:
-	MOV   AX,0
+	MOV   AX,0D
 	JMP   @@end
 @@more:
-	MOV   AX,2
+	MOV   AX,2D
 	JMP   @@end
 @@end:
 	RET
 	ENDP
 
-; Incoming: BX, AL, CX
-; Ret: BX-symbol index      |! al - search-symbol, bx, cx-strlen 
-strchr proc                          ; [unsafe]-Search symbol
-	CLD                          ; Set direction of increment
-	XOR   BX,BX                  ; Will be the index of the found character
-	CALL  strlen                 ; In cx we write the length of the string
+; Ret: BX-symbol index
+; Incoming: al - search-symbol, bx, cx-strlen 
+strchr proc                         ; [unsafe]-Search symbol
+	CLD                         ; Set direction of increment
+	XOR   BX,BX                 ; Will be the index of the found character
+	CALL  strlen                ; In cx we write the length of the string
 	PUSH  AX
-	CALL  _strchr                ; Call executor
+	CALL  _strchr               ; Call executor
 	POP   AX
 	RET
 	ENDP
-_strchr proc                         ; [cdecl] doesn-t clear anything
-	MOV   bp,sp                  ; Set stack save-pointer
-	MOV   AX,[bp + 2D]           ; Search-symbol
+_strchr proc                        ; [cdecl] doesn-t clear anything
+	MOV   bp,sp                 ; Set stack save-pointer
+	MOV   AX,[bp + 2D]          ; Search-symbol
 @@continueSearch:
 	scasb
 	JE    @@end
@@ -113,8 +163,8 @@ _strchr proc                         ; [cdecl] doesn-t clear anything
 	RET
 	ENDP
 
-; Incoming: SI, AL
-; Ret: Nothing              |! al - end-of-line char, {bx} - string ptr, si - counter di - pos on screen
+; Ret: Nothing
+; Incoming: al - end-of-line char, {bx} - string ptr, si - counter di - pos on screen
 print proc                          ; [unsafe]-Put symbols on the screen
 	XOR   AL,AL                 ; #pascal wrapper
 	XOR   SI,SI                 ; Set begin of the string
@@ -124,7 +174,7 @@ print proc                          ; [unsafe]-Put symbols on the screen
 	ENDP
 _print proc                         ; [pascal]  clear di position
 	MOV   bp,sp
-	MOV   di,[bp + 2d]          ; Use di-index
+	MOV   di,[bp + 2D]          ; Use di-index
 @@repeat:
 	scasb                       ; Cmp with end of line char
 	JE    @@end
@@ -139,8 +189,8 @@ _print proc                         ; [pascal]  clear di position
 	RET
 	ENDP
 
-; Ret: new-string {di pointer}
-; Incoming: SI, DI, AL      |! al - end-of-line character, {si, di} - ptr of strings
+; Ret: NEW-STRING {di pointer}
+; Incoming: al - end-of-line character, {si, di} - ptr of strings
 strncpy proc                        ; [safe]-copy a string to another
 	CLD                         ; Set direction of increment
 	CALL  _strncpy              ; Call executor
@@ -158,8 +208,8 @@ _strncpy proc
 	RET
 	ENDP
 
-; Incoming: AL,CX   
-; Ret: CX -sym.counter      |! al - end-of-line character, {di} - ptr to string
+; Ret: CX -sym.counter
+; Incoming: al - end-of-line character, {di} - ptr to string 
 strlen_short proc                   ; [unsave]-string length
 	PUSH  AX                    ; #cdecl wrapper
 	CLD                         ; Set direction of increment
@@ -176,10 +226,11 @@ _strlen_short proc                  ; Execute
 	RET
 	ENDP
 
-; Incoming: AX,CX   
 ; Ret: CX -sym.counter
+; Incoming: ax-terminated character, cx-symbol counter   
 strlen proc                         ; [unsave]-string length
 	PUSH  AX                    ; #cdecl wrapper
+	XOR   AX,AX
 	CLD                         ; Set direction of increment
 	XOR   CX,CX                 ; Prepare parameters
 	CALL  _strlen               ; Call executor
@@ -232,5 +283,6 @@ str1 db 'meow meow meow purr!', 0
 str2 db 'abobus.86-64', 0
 str3 db 'meowWZ', 0
 stai db '123', 0
+stia db '   ', 0                    ;string to fill with numbers
 
 END start
