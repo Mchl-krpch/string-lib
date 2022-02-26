@@ -31,17 +31,53 @@ org 100h
 ;-------------------------------------------------------------------------------
 
 	;-Some conventions when using registers in the library
-;es:[di] ~ ptr to str №1, ds:[si] ~ ptr to str №2, cx  ~ counter,  al ~ symbol
+;es:[di] ~ ptr to str №1,   ds:[si] ~ ptr to str №2,   cx  ~ counter,    al ~ symbol
 start:; callable functions are used with < _ > prefix
-	CALL  set_video
-	CALL  prog_delay
-	MOV   BX, 
+	MOV   DI, offset str3
+	CALL  strlen_short
 	CALL  exit_program
 
 
+strncpy proc
+	CLD
+	XOR   AX,AX
+	CALL  _strncpy
+	RET
+	ENDP
+_strncpy proc
+@@repeat:
+	movsb
+	CMP   es:[di],al
+	JE    @@end
+	CMP   ds:[si], al
+	JE    @@end
+	JMP   @@repeat
+@@end:
+	RET
+	ENDP
 
+; Incoming: AL,CX   
+; Ret: CX -sym.counter
+strlen_short proc                   ; [unsave]-string length
+	PUSH  AX                    ; #cdecl wrapper
+	CLD                         ; Set direction of increment
+	MOV   CX, 0FFFFH            ; [!] Subtract the length of the string from the maximum
+	XOR   AL, AL                ;     index and take the complement of two
+	CALL   _strlen_short
+	SUB   CX, 1D                ; if you do not subtract one, then there will be a
+	POP    AX                   ; length of the string with zero
+	RET
+	ENDP
+_strlen_short proc                  ; Execute
+	repne scasb                 ; cmp al, es:[di] ~ word-ptr
+	NOT   CX                    ; [!] take the complement of two
+	RET
+	ENDP
+
+; Incoming: AX,CX   
+; Ret: CX -sym.counter
 strlen proc                         ; [unsave]-string length
-	PUSH   AX                   ; #cdecl wrapper
+	PUSH  AX                    ; #cdecl wrapper
 	CLD                         ; Set direction of increment
 	XOR   CX, CX                ; Prepare parameters
 	XOR   AL, AL                ;
@@ -49,20 +85,20 @@ strlen proc                         ; [unsave]-string length
 	POP    AX
 	RET
 	ENDP
-_strlen proc                        ; Cxecute
-find_nul:
+_strlen proc                        ; Execute
+@@find_nul:
 	scasb                       ; cmp al, es:[di] ~ word-ptr
 	JE    @@end                 ; End if we find symbol
 	INC   CX
-	JMP   find_nul
+	JMP   @@find_nul
 @@end:
 	RET
 	ENDP
 
 	;#.utilities functions for library (with wrappers for some)
-prog_delay proc                     ; [safe]-program delay.
+prog_delay proc                     ; [safe]-program delay until the key is pressed
 	PUSH  AX                    ; #cdecl wrapper 
-	JMP   proc
+	JMP   _pause
 	POP   AX
 	RET
 	ENDP
@@ -94,5 +130,6 @@ exit_program proc                   ; #programm finalist.
 
 str1 db 'meow meow meow purr!', 0
 str2 db 'abobus.86-64', 0
+str3 db 'meowWW', 0
 
 END start
