@@ -10,7 +10,7 @@ My second assembly language project, implemented `standard string functions` fro
 * strchr - find a character in a string
 * strcpy - copy a string to another string
 
-## Process
+## Process 👾
 
 ![img](https://raw.githubusercontent.com/Mchl-krpch/string-lib/main/visual/wrapper-poster.jpg)
 
@@ -18,10 +18,10 @@ Commands like [scasb](http://www.club155.ru/x86cmd/SCASB) helped me a lot, this 
 
 ## New info
 * scasb - compares value es:[di] with al
-* loop  - repeats some action until cx is reset to zero
-* stosw - copys    value ax to es:[di]
-* smpsb - compares value ds:[si] with es:[di]
-* movsb - writes   ds:[si] to es:[di]
+* 🔁loop  - repeats some action until cx is reset to zero
+* ⤴️stosw - copys    value ax to es:[di]
+* 🔀smpsb - compares value ds:[si] with es:[di]
+* 🔂movsb - writes   ds:[si] to es:[di]
 
 ## Thanks!
 I will be glad to your `issue`
